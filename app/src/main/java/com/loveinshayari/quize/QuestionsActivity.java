@@ -9,24 +9,36 @@ import android.view.animation.DecelerateInterpolator;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class QuestionsActivity extends AppCompatActivity {
 
+    FirebaseDatabase database = FirebaseDatabase.getInstance();
+    DatabaseReference myRef = database.getReference();
     private TextView question, noIndicater;
     private FloatingActionButton bookmarkbt;
     private LinearLayout optionsContainer;
     private Button share, next;
     private int count = 0;
-    private List<QusetionModel> qusetionModels;
+    private List<QusetionModel> list;
     private int position;
     private int score = 0;
+    private String category;
+    private int setNo;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,41 +52,57 @@ public class QuestionsActivity extends AppCompatActivity {
         share = findViewById(R.id.share);
         next = findViewById(R.id.next);
 
-        qusetionModels = new ArrayList<>();
-        qusetionModels.add(new QusetionModel("Qusetion 1", "A", "B", "C", "D", "B"));
-        qusetionModels.add(new QusetionModel("Qusetion 2", "A", "B", "C", "D", "B"));
-        qusetionModels.add(new QusetionModel("Qusetion 3", "A", "B", "C", "D", "C"));
-        qusetionModels.add(new QusetionModel("Qusetion 4", "A", "B", "C", "D", "D"));
-        qusetionModels.add(new QusetionModel("Qusetion 5", "A", "B", "C", "D", "A"));
-        qusetionModels.add(new QusetionModel("Qusetion 6", "A", "B", "C", "D", "C"));
-        qusetionModels.add(new QusetionModel("Qusetion 7", "A", "B", "C", "D", "D"));
+        category = getIntent().getStringExtra("category");
+        setNo = getIntent().getIntExtra("setsNo ", 1);
 
-        for (int i = 0; i < 4; i++) {
-            optionsContainer.getChildAt(i).setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    checkAnswer((Button) view);
-                }
-            });
-        }
 
-        noIndicater.setText(position+"/"+qusetionModels.size());
+        list = new ArrayList<>();
 
-        playanim(question,0,qusetionModels.get(position).getQusetion());
-        next.setOnClickListener(new View.OnClickListener() {
+        myRef.child("SETS").child(category).child("questions").orderByChild("setNO").equalTo(setNo).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
-            public void onClick(View view) {
-                next.setEnabled(false);
-                next.setAlpha(0.7f);
-                enableOption(true);
-                position++;
-                if (position == qusetionModels.size()){
-                    // score activity
-                   return;
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                for (DataSnapshot snapshot : dataSnapshot.getChildren()){
+                    list.add(snapshot.getValue(QusetionModel.class));
                 }
-                count = 0;
-                playanim(question, 0, qusetionModels.get(position).getQusetion());
 
+                if (list.size() > 0) {
+                    for (int i = 0; i < 4; i++) {
+                        optionsContainer.getChildAt(i).setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {
+                                checkAnswer((Button) view);
+                            }
+                        });
+                    }
+                    noIndicater.setText(position + "/" + list.size());
+
+                    playanim(question, 0, list.get(position).getQus());
+                    next.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view) {
+                            next.setEnabled(false);
+                            next.setAlpha(0.7f);
+                            enableOption(true);
+                            position++;
+                            if (position == list.size()) {
+                                // score activity
+                                return;
+                            }
+                            count = 0;
+                            playanim(question, 0, list.get(position).getQus());
+
+                        }
+                    });
+                }
+                else {
+
+                    Toast.makeText(QuestionsActivity.this, "no qusetions now", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+                Toast.makeText(QuestionsActivity.this, databaseError.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -88,13 +116,13 @@ public class QuestionsActivity extends AppCompatActivity {
                 if (value == 0 && count < 4) {
                     String options = "";
                     if (count == 0) {
-                        options = qusetionModels.get(position).getOptionA();
+                        options = list.get(position).getA();
                     } else if (count == 1) {
-                        options = qusetionModels.get(position).getOptionB();
+                        options = list.get(position).getB();
                     } else if (count == 2) {
-                        options = qusetionModels.get(position).getOptionC();
+                        options = list.get(position).getC();
                     } else if (count == 3) {
-                        options = qusetionModels.get(position).getOptionD();
+                        options = list.get(position).getD();
                     }
                     playanim(optionsContainer.getChildAt(count), 0, options);
                     count++;
@@ -107,7 +135,7 @@ public class QuestionsActivity extends AppCompatActivity {
                 if (value == 0) {
                     try {
                         ((TextView) view).setText(data);
-                        noIndicater.setText(position+1+"/"+qusetionModels.size());
+                        noIndicater.setText(position + 1 + "/" + list.size());
                     } catch (ClassCastException ex) {
                         ((Button) view).setText(data);
                     }
@@ -132,21 +160,21 @@ public class QuestionsActivity extends AppCompatActivity {
         enableOption(false);
         next.setEnabled(true);
         next.setAlpha(1);
-        if (selectOption.getText().toString().equals(qusetionModels.get(position).getCorrectAns())) {
+        if (selectOption.getText().toString().equals(list.get(position).getAns())) {
             selectOption.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#4CAF50")));
             score++;
         } else {
             selectOption.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#ff0000")));
-            Button correctoption = (Button) optionsContainer.findViewWithTag(qusetionModels.get(position).getCorrectAns());
+            Button correctoption =  optionsContainer.findViewWithTag(list.get(position).getAns());
             correctoption.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#4CAF50")));
         }
 
     }
 
-    private void enableOption(boolean enabled) {
+    private void enableOption(boolean enable) {
         for (int i = 0; i < 4; i++) {
-            optionsContainer.getChildAt(i).setEnabled(enabled);
-            if (enabled){
+            optionsContainer.getChildAt(i).setEnabled(enable);
+            if (enable) {
                 optionsContainer.getChildAt(i).setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#989898")));
             }
         }

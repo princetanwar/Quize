@@ -2,11 +2,34 @@ package com.loveinshayari.quize;
 
 public class CategoriModel {
 
-    private String url,title;
+    private String name;
+    private int sets;
+    private String url;
 
-    public CategoriModel(String url, String title) {
+    public CategoriModel() {
+        // for fireabase
+    }
+
+    public CategoriModel(String name, int sets, String url) {
+        this.name = name;
+        this.sets = sets;
         this.url = url;
-        this.title = title;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public int getSets() {
+        return sets;
+    }
+
+    public void setSets(int sets) {
+        this.sets = sets;
     }
 
     public String getUrl() {
@@ -15,13 +38,5 @@ public class CategoriModel {
 
     public void setUrl(String url) {
         this.url = url;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
     }
 }

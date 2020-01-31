@@ -22,7 +22,7 @@ public class SetsActivity extends AppCompatActivity {
 
         gridView = findViewById(R.id.gridView);
 
-        GridAdaptor gridAdaptor = new GridAdaptor(16);
+        GridAdaptor gridAdaptor = new GridAdaptor(getIntent().getIntExtra("sets",0),getIntent().getStringExtra("title"));
         gridView.setAdapter(gridAdaptor);
 
     }
